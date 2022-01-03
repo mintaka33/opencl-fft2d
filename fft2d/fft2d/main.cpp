@@ -92,7 +92,7 @@ VkFFTResult fft_2d(VkGPU* vkGPU)
     configuration.FFTdim = 2; //FFT dimension, 1D, 2D or 3D
     configuration.size[0] = 16;
     configuration.size[1] = 16;
-    configuration.numberBatches = 1;
+    configuration.numberBatches = 0;
     configuration.performR2C = 1; // perform R2C/C2R decomposition (0 - off, 1 - on)
     uint64_t num_items = configuration.size[0] * configuration.size[1];
 
@@ -102,16 +102,21 @@ VkFFTResult fft_2d(VkGPU* vkGPU)
     uint64_t bufferSize = sizeof(float) * 2 * num_items;
     configuration.isInputFormatted = 1;
 
-    //configuration.inputBufferStride[0] = configuration.size[0];
-    //configuration.inputBufferStride[1] = configuration.inputBufferStride[0] * configuration.size[1];
+    configuration.inputBufferStride[0] = configuration.size[0];
+    configuration.inputBufferStride[1] = configuration.inputBufferStride[0] * configuration.size[1];
     //configuration.bufferStride[0] = (configuration.size[0] / 2) + 1;
     //configuration.bufferStride[1] = configuration.bufferStride[0] * configuration.size[1];
 
     vector<float> indata(num_items, 0);
-    vector<float> outdata(2*num_items, 0);
     for (size_t i = 0; i < num_items; i++) {
         indata[i] = i % 256;
     }
+    for (size_t i = 0; i < num_items; i++) {
+        if (i % 16 == 0) printf("\n");
+        printf("%f, ", indata[i]);
+    }
+    printf("\n");
+    vector<float> outdata(2 * num_items, 0);
 
     configuration.device = &vkGPU->device;
     configuration.platform = &vkGPU->platform;
