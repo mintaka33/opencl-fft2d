@@ -8,6 +8,7 @@
 #include <iostream>
 #include <vector>
 #include <inttypes.h>
+#include <fstream>
 
 using namespace std;
 
@@ -116,15 +117,7 @@ VkFFTResult fft_2d(VkGPU* vkGPU, int w, int h)
     vector<float> indata(num_items, 0);
     vector<float> outdata(2 * num_items, 0);
     for (size_t i = 0; i < num_items; i++) {
-        indata[i] = i % 256;
-    }
-
-    if (g_dump_result) {
-        for (size_t i = 0; i < num_items; i++) {
-            if (i % 16 == 0) printf("\n");
-            printf("%f, ", indata[i]);
-        }
-        printf("\n");
+        indata[i] = i;
     }
 
     configuration.device = &vkGPU->device;
@@ -207,11 +200,18 @@ VkFFTResult fft_2d(VkGPU* vkGPU, int w, int h)
         return VKFFT_ERROR_FAILED_TO_COPY;
     clFinish(vkGPU->commandQueue);
     if (g_dump_result) {
-        for (size_t i = 0; i < 2 * num_items; i++) {
-            if (i % 16 == 0) printf("\n");
-            printf("%f, ", outdata[i]);
+        ofstream outfile("result.txt");
+        for (size_t y = 0; y < h; y++) {
+            for (size_t x = 0; x < 2*w; x++) {
+                outfile << outdata[y*2*w + x] << ", ";
+            }
+            outfile << "\n";
         }
-        printf("\n");
+        //for (size_t i = 0; i < 2 * num_items; i++) {
+        //    if (i % 16 == 0) printf("\n");
+        //    printf("%f, ", outdata[i]);
+        //}
+        //printf("\n");
     }
 
 #if 0
