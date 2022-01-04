@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <vector>
 #include <memory>
+#include <string>
 #include <string.h>
 #include <chrono>
 #include <thread>
@@ -19,6 +20,11 @@ using namespace std;
 
 #include <CL/cl.h>
 #include "vkFFT.h"
+
+// command line arguments
+static int g_width = 128;
+static int g_height = 128;
+static int g_dump_result = false;
 
 typedef struct {
     cl_platform_id platform;
@@ -83,15 +89,15 @@ VkFFTResult init_device(VkGPU* vkGPU)
     return VKFFT_SUCCESS;
 }
 
-VkFFTResult fft_2d(VkGPU* vkGPU)
+VkFFTResult fft_2d(VkGPU* vkGPU, int w, int h)
 {
     cl_int res = CL_SUCCESS;
     //zero-initialize configuration + FFT application
     VkFFTConfiguration configuration = {};
     VkFFTApplication app = {};
     configuration.FFTdim = 2; //FFT dimension, 1D, 2D or 3D
-    configuration.size[0] = 16;
-    configuration.size[1] = 16;
+    configuration.size[0] = w;
+    configuration.size[1] = h;
     configuration.numberBatches = 0;
     configuration.performR2C = 1; // perform R2C/C2R decomposition (0 - off, 1 - on)
     uint64_t num_items = configuration.size[0] * configuration.size[1];
@@ -108,15 +114,18 @@ VkFFTResult fft_2d(VkGPU* vkGPU)
     //configuration.bufferStride[1] = configuration.bufferStride[0] * configuration.size[1];
 
     vector<float> indata(num_items, 0);
+    vector<float> outdata(2 * num_items, 0);
     for (size_t i = 0; i < num_items; i++) {
         indata[i] = i % 256;
     }
-    for (size_t i = 0; i < num_items; i++) {
-        if (i % 16 == 0) printf("\n");
-        printf("%f, ", indata[i]);
+
+    if (g_dump_result) {
+        for (size_t i = 0; i < num_items; i++) {
+            if (i % 16 == 0) printf("\n");
+            printf("%f, ", indata[i]);
+        }
+        printf("\n");
     }
-    printf("\n");
-    vector<float> outdata(2 * num_items, 0);
 
     configuration.device = &vkGPU->device;
     configuration.platform = &vkGPU->platform;
@@ -170,12 +179,13 @@ VkFFTResult fft_2d(VkGPU* vkGPU)
     if (res != CL_SUCCESS)
         return VKFFT_ERROR_FAILED_TO_COPY;
     clFinish(vkGPU->commandQueue);
-
-    for (size_t i = 0; i < 2*num_items; i++) {
-        if (i % 16 == 0) printf("\n");
-        printf("%f, ", outdata[i]);
+    if (g_dump_result) {
+        for (size_t i = 0; i < 2 * num_items; i++) {
+            if (i % 16 == 0) printf("\n");
+            printf("%f, ", outdata[i]);
+        }
+        printf("\n");
     }
-    printf("\n");
 
 #if 0
     // IFFT
@@ -206,14 +216,28 @@ VkFFTResult fft_2d(VkGPU* vkGPU)
     return VKFFT_SUCCESS;
 }
 
-int main()
+void parse_arg(int argc, char** argv)
 {
-    VkFFTResult resFFT = VKFFT_SUCCESS;
+    if (argc >= 3) {
+        g_width = atoi(argv[1]);
+        g_height = atoi(argv[2]);
+    }
 
+    for (size_t i = 1; i < argc; i++) {
+        if (string(argv[i]) == "-d")
+            g_dump_result = true;
+    }
+}
+
+int main(int argc, char** argv)
+{
+    parse_arg(argc, argv);
+
+    VkFFTResult resFFT = VKFFT_SUCCESS;
     VkGPU vkGPU = {};
     init_device(&vkGPU);
 
-    resFFT = fft_2d(&vkGPU);
+    resFFT = fft_2d(&vkGPU, g_width, g_height);
     printf("resFFT = % d\n", resFFT);
 
     return 0;
