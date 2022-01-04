@@ -155,10 +155,37 @@ VkFFTResult fft_2d(VkGPU* vkGPU, int w, int h)
     configuration.bufferSize = &bufferSize;
     //configuration.outputBuffer = &cloutbuffer;
     //configuration.outputBufferSize = &outputBufferSize;
+
+
+    //configuration is initialized like in other examples
+    //configuration.saveApplicationToString = 1;
+    //configuration.loadApplicationFromString = 1; //choose one to save / load binary file
+
+    if (configuration.loadApplicationFromString) {
+        FILE* kernelCache;
+        uint64_t str_len;
+
+        kernelCache = fopen("VkFFT_binary", "r");
+        fseek(kernelCache, 0, SEEK_END);
+        str_len = ftell(kernelCache);
+        fseek(kernelCache, 0, SEEK_SET);
+        configuration.loadApplicationString = malloc(str_len);
+        fread(configuration.loadApplicationString, str_len, 1, kernelCache);
+        fclose(kernelCache);
+    }
+
+
     VkFFTResult resFFT = initializeVkFFT(&app, configuration);
-    if (resFFT != VKFFT_SUCCESS) {
+    if (resFFT != VKFFT_SUCCESS && resFFT != VKFFT_ERROR_ENABLED_saveApplicationToString) {
         printf("ERROR: initializeVkFFT failed with resFFT = %d\n", resFFT);
         return resFFT;
+    }
+
+    if (configuration.saveApplicationToString) {
+        FILE* kernelCache;
+        kernelCache = fopen("VkFFT_binary", "w");
+        fwrite(app.saveApplicationString, app.applicationStringSize, 1, kernelCache);
+        fclose(kernelCache);
     }
 
     VkFFTLaunchParams launchParams = {};
@@ -207,6 +234,9 @@ VkFFTResult fft_2d(VkGPU* vkGPU, int w, int h)
     }
     printf("\n");
 #endif
+
+    if (configuration.loadApplicationFromString)
+        free(configuration.loadApplicationString);
 
     clReleaseMemObject(clbuffer);
     clReleaseMemObject(clinbuffer);

@@ -25438,6 +25438,8 @@ static inline VkFFTResult VkFFTPlanAxis(VkFFTApplication* app, VkFFTPlan* FFTPla
 				return VKFFT_ERROR_FAILED_TO_COMPILE_PROGRAM;
 			}
 			axis->binarySize = codeSize;
+			printf("INFO: kernel binary size = %d\n", codeSize);
+
 			axis->binary = (char*)malloc(axis->binarySize);
 			if (!axis->binary) {
 				free(code0);
