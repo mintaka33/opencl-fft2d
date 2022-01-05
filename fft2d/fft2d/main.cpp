@@ -100,13 +100,13 @@ VkFFTResult fft_2d(VkGPU* vkGPU, int w, int h)
     configuration.size[0] = w;
     configuration.size[1] = h;
     configuration.numberBatches = 0;
-    configuration.performR2C = 1; // perform R2C/C2R decomposition (0 - off, 1 - on)
+    //configuration.performR2C = 1; // perform R2C/C2R decomposition (0 - off, 1 - on)
     uint64_t num_items = configuration.size[0] * configuration.size[1];
 
     // out-of-place R2C FFT with custom strides
-    uint64_t inputBufferSize = sizeof(float) * num_items;
+    uint64_t inputBufferSize = sizeof(float) * 2 * num_items;
     uint64_t outputBufferSize = sizeof(float) * 2 * num_items;
-    uint64_t bufferSize = sizeof(float) * 2 * num_items;
+    uint64_t bufferSize = sizeof(float) * 2 * num_items; // (configuration.size[0] / 2 + 1)* configuration.size[1];
 
     configuration.isInputFormatted = 1;
     configuration.inputBufferStride[0] = configuration.size[0];
@@ -114,9 +114,9 @@ VkFFTResult fft_2d(VkGPU* vkGPU, int w, int h)
     configuration.bufferStride[0] = configuration.size[0];
     configuration.bufferStride[1] = configuration.bufferStride[0] * configuration.size[1];
 
-    vector<float> indata(num_items, 0);
+    vector<float> indata(2 * num_items, 0);
     vector<float> outdata(2 * num_items, 0);
-    for (size_t i = 0; i < num_items; i++) {
+    for (size_t i = 0; i < 2*num_items; i += 2) {
         indata[i] = i;
     }
 
@@ -205,7 +205,7 @@ VkFFTResult fft_2d(VkGPU* vkGPU, int w, int h)
         ofstream outfile("result.txt");
         for (size_t y = 0; y < h; y++) {
             for (size_t x = 0; x < 2*w; x++) {
-                outfile << outdata[y*2*w + x] << ", ";
+                outfile << outdata[y*2*w + x]/2 << ", ";
             }
             outfile << "\n";
         }
