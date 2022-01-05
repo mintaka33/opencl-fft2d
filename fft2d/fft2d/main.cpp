@@ -13,7 +13,7 @@
 using namespace std;
 
 #define VKFFT_BACKEND 3
-#define _CRT_SECURE_NO_WARNINGS 1
+#define ENABLE_LOAD_SAVE 0
 
 #ifndef CL_USE_DEPRECATED_OPENCL_1_2_APIS
 #define CL_USE_DEPRECATED_OPENCL_1_2_APIS
@@ -107,12 +107,12 @@ VkFFTResult fft_2d(VkGPU* vkGPU, int w, int h)
     uint64_t inputBufferSize = sizeof(float) * num_items;
     uint64_t outputBufferSize = sizeof(float) * 2 * num_items;
     uint64_t bufferSize = sizeof(float) * 2 * num_items;
-    configuration.isInputFormatted = 1;
 
+    configuration.isInputFormatted = 1;
     configuration.inputBufferStride[0] = configuration.size[0];
     configuration.inputBufferStride[1] = configuration.inputBufferStride[0] * configuration.size[1];
-    //configuration.bufferStride[0] = (configuration.size[0] / 2) + 1;
-    //configuration.bufferStride[1] = configuration.bufferStride[0] * configuration.size[1];
+    configuration.bufferStride[0] = configuration.size[0];
+    configuration.bufferStride[1] = configuration.bufferStride[0] * configuration.size[1];
 
     vector<float> indata(num_items, 0);
     vector<float> outdata(2 * num_items, 0);
@@ -149,7 +149,7 @@ VkFFTResult fft_2d(VkGPU* vkGPU, int w, int h)
     //configuration.outputBuffer = &cloutbuffer;
     //configuration.outputBufferSize = &outputBufferSize;
 
-
+#if ENABLE_LOAD_SAVE
     //configuration is initialized like in other examples
     //configuration.saveApplicationToString = 1;
     //configuration.loadApplicationFromString = 1; //choose one to save / load binary file
@@ -166,7 +166,7 @@ VkFFTResult fft_2d(VkGPU* vkGPU, int w, int h)
         fread(configuration.loadApplicationString, str_len, 1, kernelCache);
         fclose(kernelCache);
     }
-
+#endif
 
     VkFFTResult resFFT = initializeVkFFT(&app, configuration);
     if (resFFT != VKFFT_SUCCESS && resFFT != VKFFT_ERROR_ENABLED_saveApplicationToString) {
@@ -174,12 +174,14 @@ VkFFTResult fft_2d(VkGPU* vkGPU, int w, int h)
         return resFFT;
     }
 
+#if ENABLE_LOAD_SAVE
     if (configuration.saveApplicationToString) {
         FILE* kernelCache;
         kernelCache = fopen("VkFFT_binary", "w");
         fwrite(app.saveApplicationString, app.applicationStringSize, 1, kernelCache);
         fclose(kernelCache);
     }
+#endif
 
     VkFFTLaunchParams launchParams = {};
     launchParams.inputBuffer = &clinbuffer;
@@ -235,8 +237,10 @@ VkFFTResult fft_2d(VkGPU* vkGPU, int w, int h)
     printf("\n");
 #endif
 
+#if ENABLE_LOAD_SAVE
     if (configuration.loadApplicationFromString)
         free(configuration.loadApplicationString);
+#endif
 
     clReleaseMemObject(clbuffer);
     clReleaseMemObject(clinbuffer);
